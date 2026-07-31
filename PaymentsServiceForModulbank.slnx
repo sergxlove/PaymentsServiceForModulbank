@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/SolutionFolder/">
+    <File Path="docker-compose.yml" />
+  </Folder>
+  <Project Path="PaymentsServiceForModulbank.API/PaymentsServiceForModulbank.API.csproj" />
+</Solution>
