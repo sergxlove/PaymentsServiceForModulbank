@@ -26,6 +26,23 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
                 .FirstOrDefaultAsync(a => a.OperationId == operationId, token);
         }
 
+        public async Task<List<OutboxMessages>> GetByStatusAsync(string status, int take, 
+            CancellationToken token)
+        {
+            return await _context.OutboxTable
+                .Where(a => a.Status == status)
+                .Take(take)
+                .ToListAsync(token);
+        }
+
+        public async Task<int> UpdateStatusAsync(Guid id, string status, CancellationToken token)
+        {
+            return await _context.OutboxTable
+                .Where(a => a.Id == id)
+                .ExecuteUpdateAsync(a => a
+                .SetProperty(a => a.Status, status), token);
+        }
+
         public async Task<bool> CheckAsync(string operationId, CancellationToken token)
         {
             OutboxMessages? result = await _context.OutboxTable

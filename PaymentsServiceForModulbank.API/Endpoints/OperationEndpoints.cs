@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using PaymentsServiceForModulbank.API.Requests;
+﻿using PaymentsServiceForModulbank.API.Requests;
 using PaymentsServiceForModulbank.API.Responses;
 using PaymentsServiceForModulebank.Core.Models;
 using PaymentsServiceForModulebank.Sqlite;
@@ -95,7 +94,7 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                             Id = Guid.NewGuid(),
                             OperationId = op.OperationId,
                             Payload = JsonSerializer.Serialize(op),
-                            Status = "PROCESSING",
+                            Status = "PENDING",
                             CreatedAt = DateTime.UtcNow,
                             RetryCount = 0
                         };
@@ -116,6 +115,38 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                 catch
                 {
                     await transaction.RollbackAsync(token);
+                    return Results.InternalServerError();
+                }
+            });
+
+            app.MapGet("/operations/{id}", async (string id,
+                IOperationsRepository operationsRepository,
+                CancellationToken token) =>
+            {
+                try
+                {
+                    OperationStatus? status = await operationsRepository.GetStatusAsync(id, token);
+                    if (status is null)
+                        return Results.NotFound();
+                    return Results.Ok(status);
+                }
+                catch
+                {
+                    return Results.InternalServerError();
+                }
+            });
+
+            app.MapGet("/operations/{id}/events", async (string id,
+                IEventsRepository eventsRepository,
+                CancellationToken token) =>
+            {
+                try
+                {
+                    List<Events> result = await eventsRepository.GetByIdOperAsync(id, token);
+                    return Results.Ok(result);
+                }
+                catch
+                {
                     return Results.InternalServerError();
                 }
             });

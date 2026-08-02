@@ -4,11 +4,11 @@ using PaymentsServiceForModulebank.Core.Models;
 
 namespace PaymentsServiceForModulebank.Sqlite.Configurations
 {
-    public class OutboxConfigurations : IEntityTypeConfiguration<OutboxMessages>
+    public class EventsConfiguration : IEntityTypeConfiguration<Events>
     {
-        public void Configure(EntityTypeBuilder<OutboxMessages> builder)
+        public void Configure(EntityTypeBuilder<Events> builder)
         {
-            
+
         }
     }
 }

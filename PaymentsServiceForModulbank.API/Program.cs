@@ -13,6 +13,7 @@ namespace PaymentsServiceForModulbank.API
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddDbContext<PaymengsServiceDbContext>(options =>
                 options.UseSqlite("Data Source=/data/payments.db"));
+            builder.Services.AddScoped<IEventsRepository, EventsRepository>();
             builder.Services.AddScoped<IOperationsRepository, OperationsRepository>();
             builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
             var app = builder.Build();
