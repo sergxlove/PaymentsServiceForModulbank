@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PaymentsServiceForModulebank.Core.Models;
 using PaymentsServiceForModulebank.Sqlite.Abstractions;
+using System.Reflection.Emit;
 
 namespace PaymentsServiceForModulebank.Sqlite.Repositories
 {
@@ -35,6 +36,17 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(a => a.OperationId == operationId, token);
         }
+
+        public async Task<OperationStatus?> GetStatusAsync(string operationId, CancellationToken token)
+        {
+            Operations? op = await _context.OperationsTable
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.OperationId == operationId, token);
+            if (op is null)
+                return null;
+            return op.Status;
+        }
+
 
         public async Task<int> UpdateStatusAsync(string operationId, OperationStatus status,
             CancellationToken token)
