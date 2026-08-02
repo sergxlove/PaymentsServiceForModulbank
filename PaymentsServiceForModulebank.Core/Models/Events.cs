@@ -5,18 +5,20 @@
         public Guid Id { get; set; }
         public string OperationId { get; set; } = string.Empty;
         public int EventId { get; set; }
+        public string Type { get; set; } = string.Empty;
         public string? FromStatus { get; set; }
         public string ToStatus { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
         public DateTime OccurredAt { get; set; }
 
-        public Events Init(string operationId)
+        public static Events Init(string operationId)
         {
             return new Events
             {
                 Id = Guid.NewGuid(),
                 OperationId = operationId,
                 EventId = 1,
+                Type = "CREATED",
                 FromStatus = null,
                 ToStatus = "CREATED",
                 Message = "Operation created",
@@ -24,12 +26,14 @@
             }; 
         }
 
-        public void Update(string newStatus, string newMessage)
+        public void Update(string newType, string newStatus, string newMessage)
         {
             EventId = EventId + 1;
+            Type = newType;
             FromStatus = ToStatus;
             ToStatus = newStatus;
             Message = newMessage;
+            OccurredAt = DateTime.UtcNow;
         }
     }
 }

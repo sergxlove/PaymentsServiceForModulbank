@@ -46,5 +46,18 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
             }
             return result;
         }
+
+        public async Task<int> UpdateAsync(Events ev, CancellationToken token)
+        {
+            return await _context.EventsTable
+                .Where(a => a.Id == ev.Id)
+                .ExecuteUpdateAsync(a => a
+                .SetProperty(a => a.EventId, ev.EventId)
+                .SetProperty(a => a.Type, ev.Type)
+                .SetProperty(a => a.FromStatus, ev.FromStatus)
+                .SetProperty(a => a.ToStatus, ev.ToStatus)
+                .SetProperty(a => a.Message, ev.Message)
+                .SetProperty(a => a.OccurredAt, ev.OccurredAt), token);
+        }
     }
 }

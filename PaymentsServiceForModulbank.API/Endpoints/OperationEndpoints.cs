@@ -18,9 +18,12 @@ namespace PaymentsServiceForModulbank.API.Endpoints
 
             app.MapPost("/operations", async (HttpContext context, 
                 OperationCreateRequest request,
+                PaymengsServiceDbContext db,
                 IOperationsRepository operationsRepository,
+                IEventsRepository eventsRepository,
                 CancellationToken token) =>
             {
+                await using var transaction = await db.Database.BeginTransactionAsync(token);
                 try
                 {
                     if (string.IsNullOrWhiteSpace(request.OperationId))
@@ -56,6 +59,8 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                     string resultCreate = await operationsRepository.CreateAsync(newOp, token);
                     if (resultCreate != newOp.OperationId)
                         throw new Exception();
+                    Events newEvent = Events.Init(newOp.OperationId);
+                    await eventsRepository.CreateAsync(newEvent, token);
                     OperationCreateResponse result = new()
                     {
                         OperationId = newOp.OperationId,
@@ -65,10 +70,13 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                         Status = newOp.Status,
                         ProviderPaymentId = newOp.ProviderPaymentId
                     };
+                    await db.SaveChangesAsync(token);
+                    await transaction.CommitAsync(token);
                     return Results.Created($"/operations/{newOp.OperationId}", result);
                 }
                 catch
                 {
+                    await transaction.RollbackAsync(token);
                     return Results.InternalServerError();
                 }
             });
@@ -77,6 +85,7 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                 PaymengsServiceDbContext db,
                 IOperationsRepository operationsRepository,
                 IOutboxRepository outboxRepository,
+                IEventsRepository eventsRepository,
                 CancellationToken token) =>
             {
                 await using var transaction = await db.Database.BeginTransactionAsync(token);
@@ -101,6 +110,11 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                         Guid resultCreateOutbox = await outboxRepository.CreateAsync(om, token);
                         if (resultCreateOutbox != om.Id)
                             throw new Exception();
+                        Events? ev = await eventsRepository.GetLastOperAsync(op.OperationId, token);
+                        if(ev is null)
+                            throw new Exception();
+                        ev.Update("SUBMIT", "SUBMIT", "Operation submitted for processing");
+                        await eventsRepository.UpdateAsync(ev, token);
                     }
 
                     int resultUpdate = await operationsRepository.UpdateStatusAsync(op.OperationId, 
@@ -111,6 +125,71 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                     await db.SaveChangesAsync(token);
                     await transaction.CommitAsync(token);
                     return Results.Accepted();
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(token);
+                    return Results.InternalServerError();
+                }
+            });
+
+            app.MapPost("/receipts", async (CallBackRequest request,
+                PaymengsServiceDbContext db,
+                IOperationsRepository operationsRepository,
+                IEventsRepository eventsRepository,
+                CancellationToken token) =>
+            {
+                await using var transaction = await db.Database.BeginTransactionAsync(token);
+                try
+                {
+                    if (request is null)
+                        return Results.BadRequest();
+                    Operations? oper = await operationsRepository.GetAsync(request.OperationId, token);
+                    if (oper is null)
+                        throw new Exception();
+                    if(oper.ProviderPaymentId is null)
+                    {
+                        int resultUpdateProvider = await operationsRepository.UpdateProviderAsync(
+                            oper.OperationId, request.ProviderPaymentId, token);
+                        oper.ProviderPaymentId = request.ProviderPaymentId;
+                        if( resultUpdateProvider == 0) 
+                            throw new Exception();
+                    }
+                    else
+                    {
+                        if (oper.ProviderPaymentId != request.ProviderPaymentId)
+                            return Results.Conflict();
+                    }
+                    if(oper.Status == OperationStatus.COMPLETED 
+                        || oper.Status == OperationStatus.REJECTED)
+                        return Results.NoContent();
+                    if (oper.Status == OperationStatus.COMPLETED && request.Result == "REJECTED"
+                        || oper.Status == OperationStatus.REJECTED && request.Result == "COMPLETED")
+                        return Results.NoContent();
+                    OperationStatus finalStatus;
+                    switch(request.Result)
+                    {
+                        case "REJECTED":
+                            finalStatus = OperationStatus.REJECTED;
+                            break;
+                        case "COMPLETED":
+                            finalStatus = OperationStatus.COMPLETED;
+                            break;
+                        default:
+                            return Results.BadRequest();
+                    }
+                    int resultUpdateStatus = await operationsRepository.UpdateStatusAsync(oper.OperationId,
+                        finalStatus, token);
+                    if (resultUpdateStatus == 0)
+                        throw new Exception();
+                    Events? ev = await eventsRepository.GetLastOperAsync(oper.OperationId, token);
+                    if (ev is null)
+                        throw new Exception();
+                    ev.Update($"{request.Result}", $"{request.Result}", $"Operation {request.Result}");
+                    await eventsRepository.UpdateAsync(ev, token);
+                    await db.SaveChangesAsync(token);
+                    await transaction.CommitAsync(token);
+                    return Results.NoContent();
                 }
                 catch
                 {
