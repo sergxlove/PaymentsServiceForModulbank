@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PaymentsServiceForModulebank.Core.Models;
 using PaymentsServiceForModulebank.Sqlite.Abstractions;
-using System.Reflection.Emit;
 
 namespace PaymentsServiceForModulebank.Sqlite.Repositories
 {
@@ -55,6 +54,15 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
                 .Where(a => a.OperationId == operationId)
                 .ExecuteUpdateAsync(a => a
                 .SetProperty(a => a.Status, status), token);
+        }
+
+        public async Task<int> UpdateProviderAsync(string operationId, string providerid,  
+            CancellationToken token)
+        {
+            return await _context.OperationsTable
+                .Where(a => a.OperationId == operationId)
+                .ExecuteUpdateAsync(a => a
+                .SetProperty(a => a.ProviderPaymentId, providerid), token);
         }
     }
 }
