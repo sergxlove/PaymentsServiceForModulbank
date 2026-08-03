@@ -8,7 +8,8 @@ namespace PaymentsServiceForModulebank.Sqlite.Configurations
     {
         public void Configure(EntityTypeBuilder<Operations> builder)
         {
-            
+            builder.ToTable("operations");
+            builder.HasKey(a => a.OperationId);
         }
     }
 }

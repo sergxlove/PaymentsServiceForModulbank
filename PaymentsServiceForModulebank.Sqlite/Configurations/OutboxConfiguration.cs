@@ -8,7 +8,10 @@ namespace PaymentsServiceForModulebank.Sqlite.Configurations
     {
         public void Configure(EntityTypeBuilder<OutboxMessages> builder)
         {
-            
+            builder.ToTable("outbox");
+            builder.HasKey(a => a.Id);
+            builder.HasIndex(a => a.OperationId);
+            builder.HasIndex(a => a.Status);
         }
     }
 }
