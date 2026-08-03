@@ -1,4 +1,5 @@
-﻿using PaymentsServiceForModulebank.Core.Models;
+﻿using PaymentsServiceForModulbank.API.Responses;
+using PaymentsServiceForModulebank.Core.Models;
 using PaymentsServiceForModulebank.Sqlite;
 using PaymentsServiceForModulebank.Sqlite.Abstractions;
 using System.Text;
@@ -10,7 +11,6 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly TimeSpan _interval = TimeSpan.FromSeconds(5);
-        private readonly int _maxRetryCount = 3;
         public OutboxProcessorService(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
@@ -29,31 +29,34 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
             using var scope = _serviceProvider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<PaymengsServiceDbContext>();
             var outboxService = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
+            var operationService = scope.ServiceProvider.GetRequiredService<IOperationsRepository>();
+            var eventService = scope.ServiceProvider.GetRequiredService<IEventsRepository>();
             var httpClient = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>()
                 .CreateClient("ProviderClient");
             try
             {
-                List<OutboxMessages> mes = await outboxService.GetByStatusAsync("PENDING", 10, 
-                    cancellationToken);
+                List<OutboxMessages> mes = await outboxService.GetByStatusAsync(new List<string>
+                { "PENDING", "PROCESSING" }, 10, cancellationToken);
                 if (!mes.Any())
                     return;
                 foreach(OutboxMessages m in mes)
                 {
-                    await ProcessSingleMessage(m, httpClient, outboxService, cancellationToken);
+                    await ProcessSingleMessage(m, httpClient, db, outboxService, operationService, eventService,
+                        cancellationToken);
                 }
             }
-            catch
-            {
-
-            }
+            catch { }
         }
 
-        private async Task ProcessSingleMessage(OutboxMessages message, HttpClient httpClient, 
-            IOutboxRepository repository, CancellationToken token)
+        private async Task ProcessSingleMessage(OutboxMessages message, HttpClient httpClient,
+            PaymengsServiceDbContext context, IOutboxRepository outboxRepository, 
+            IOperationsRepository operationsRepository, IEventsRepository eventsRepository,
+            CancellationToken token)
         {
+            await using var transaction = await context.Database.BeginTransactionAsync(token);
             try
             {
-                int resultUpdate = await repository.UpdateStatusAsync(message.Id, "PROCESSING", token);
+                int resultUpdate = await outboxRepository.UpdateStatusAsync(message.Id, "PROCESSING", token);
                 if (resultUpdate == 0)
                     return;
                 var payload = JsonSerializer.Deserialize<Operations>(message.Payload);
@@ -68,16 +71,40 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
                 var response = await httpClient.SendAsync(requestMessage, token);
                 if (response.IsSuccessStatusCode)
                 {
-
+                    var responseContent = await response.Content.ReadAsStringAsync(token);
+                    var providerResponse = JsonSerializer.Deserialize<ProviderPaymentResponse>(responseContent);
+                    if(providerResponse is null)
+                    {
+                        await outboxRepository.IncrementRetryAsync(payload.OperationId, token);
+                        return;
+                    }
+                    if(providerResponse.Status == "ACCEPTED")
+                    {
+                        await operationsRepository.UpdateProviderAsync(payload.OperationId, 
+                            providerResponse.ProviderPaymentId, token);
+                        Events? lastEv = await eventsRepository.GetLastOperAsync(payload.OperationId, token);
+                        if (lastEv is null)
+                            return;
+                        lastEv.Update("PROVIDER_RESPONSE", "PROCESSING", "Payment accepted by provider");
+                        await eventsRepository.UpdateAsync(lastEv, token);
+                        await outboxRepository.UpdateStatusAsync(message.Id, "COMPLETED", token);
+                    }
+                    else
+                    {
+                        await outboxRepository.IncrementRetryAsync(payload.OperationId, token);
+                    }
                 }
                 else
                 {
-
+                    await outboxRepository.IncrementRetryAsync(payload.OperationId, token);
+                    return;
                 }
+                await context.SaveChangesAsync(token);
+                await transaction.CommitAsync(token);
             }
             catch
             {
-
+                await transaction.RollbackAsync(token);
             }
         }
     }

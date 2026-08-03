@@ -26,11 +26,20 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
                 .FirstOrDefaultAsync(a => a.OperationId == operationId, token);
         }
 
-        public async Task<List<OutboxMessages>> GetByStatusAsync(string status, int take, 
+        public async Task<List<OutboxMessages>> GetByStatusAsync(string status, int take,
             CancellationToken token)
         {
             return await _context.OutboxTable
                 .Where(a => a.Status == status)
+                .Take(take)
+                .ToListAsync(token);
+        }
+
+        public async Task<List<OutboxMessages>> GetByStatusAsync(List<string> status, int take,
+            CancellationToken token)
+        {
+            return await _context.OutboxTable
+                .Where(a => status.Contains(a.Status))
                 .Take(take)
                 .ToListAsync(token);
         }
@@ -51,6 +60,14 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
             if (result is null)
                 return false;
             return true;
+        }
+
+        public async Task<int> IncrementRetryAsync(string operationId, CancellationToken token)
+        {
+            return await _context.OutboxTable
+                .Where(a => a.OperationId == operationId)
+                .ExecuteUpdateAsync(a => a
+                .SetProperty(a => a.RetryCount, a => a.RetryCount + 1), token);
         }
     }
 }
