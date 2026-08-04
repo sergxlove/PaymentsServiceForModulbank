@@ -1,4 +1,5 @@
-﻿using PaymentsServiceForModulbank.API.Responses;
+﻿using PaymentsServiceForModulbank.API.Requests;
+using PaymentsServiceForModulbank.API.Responses;
 using PaymentsServiceForModulebank.Core.Models;
 using PaymentsServiceForModulebank.Sqlite;
 using PaymentsServiceForModulebank.Sqlite.Abstractions;
@@ -10,7 +11,7 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
     public class OutboxProcessorService : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly TimeSpan _interval = TimeSpan.FromSeconds(5);
+        private readonly TimeSpan _interval = TimeSpan.FromSeconds(30);
         public OutboxProcessorService(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
@@ -60,14 +61,18 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
                 if (resultUpdate == 0)
                     return;
                 var payload = JsonSerializer.Deserialize<Operations>(message.Payload);
-                var requestContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8,
-                    "application/json");
-                var requestMessage = new HttpRequestMessage(HttpMethod.Post, "http://provider-simulator:8081/payments")
+                ProviderRequest payloadProvider = new ProviderRequest()
                 {
-                    Content = requestContent
+                    OperationId = payload!.OperationId,
+                    Amount = payload!.Amount.ToString("F2"),
+                    Currency = payload!.Currency,
                 };
+                var requestContent = new StringContent(JsonSerializer.Serialize(payloadProvider), Encoding.UTF8,
+                    "application/json");
+                var requestMessage = new HttpRequestMessage(HttpMethod.Post, "http://localhost:8081/payments");
                 requestMessage.Headers.Add("Idempotency-Key", payload!.OperationId);
-                requestMessage.Headers.Add("X-Correlation-ID", payload.OperationId);
+                requestMessage.Headers.Add("X-Correlation-ID", payload!.OperationId);
+                requestMessage.Content = requestContent;
                 var response = await httpClient.SendAsync(requestMessage, token);
                 if (response.IsSuccessStatusCode)
                 {
@@ -86,7 +91,7 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
                         if (lastEv is null)
                             return;
                         lastEv.Update("PROVIDER_RESPONSE", "PROCESSING", "Payment accepted by provider");
-                        await eventsRepository.UpdateAsync(lastEv, token);
+                        await eventsRepository.CreateAsync(lastEv, token);
                         await outboxRepository.UpdateStatusAsync(message.Id, "COMPLETED", token);
                     }
                     else

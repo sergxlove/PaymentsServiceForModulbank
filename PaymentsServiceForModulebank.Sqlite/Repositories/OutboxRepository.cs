@@ -31,6 +31,7 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
         {
             return await _context.OutboxTable
                 .Where(a => a.Status == status)
+                .OrderByDescending(o => o.CreatedAt)
                 .Take(take)
                 .ToListAsync(token);
         }
@@ -40,6 +41,7 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
         {
             return await _context.OutboxTable
                 .Where(a => status.Contains(a.Status))
+                .OrderByDescending(o => o.CreatedAt)
                 .Take(take)
                 .ToListAsync(token);
         }
