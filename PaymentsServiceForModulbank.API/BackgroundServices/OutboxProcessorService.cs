@@ -3,6 +3,7 @@ using PaymentsServiceForModulbank.API.Responses;
 using PaymentsServiceForModulebank.Core.Models;
 using PaymentsServiceForModulebank.Sqlite;
 using PaymentsServiceForModulebank.Sqlite.Abstractions;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -63,16 +64,18 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
                 var payload = JsonSerializer.Deserialize<Operations>(message.Payload);
                 ProviderRequest payloadProvider = new ProviderRequest()
                 {
-                    OperationId = payload!.OperationId,
-                    Amount = payload!.Amount.ToString("F2"),
-                    Currency = payload!.Currency,
+                    operationId = payload!.OperationId,
+                    amount = payload!.Amount.ToString("F2", CultureInfo.InvariantCulture),
+                    currency = payload!.Currency,
                 };
                 var requestContent = new StringContent(JsonSerializer.Serialize(payloadProvider), Encoding.UTF8,
                     "application/json");
-                var requestMessage = new HttpRequestMessage(HttpMethod.Post, "http://localhost:8081/payments");
+                var requestMessage = new HttpRequestMessage(HttpMethod.Post, "http://localhost:8081/payments")
+                { 
+                    Content = requestContent 
+                };
                 requestMessage.Headers.Add("Idempotency-Key", payload!.OperationId);
                 requestMessage.Headers.Add("X-Correlation-ID", payload!.OperationId);
-                requestMessage.Content = requestContent;
                 var response = await httpClient.SendAsync(requestMessage, token);
                 if (response.IsSuccessStatusCode)
                 {

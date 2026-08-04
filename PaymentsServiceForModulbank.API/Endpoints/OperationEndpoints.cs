@@ -1,4 +1,5 @@
-﻿using PaymentsServiceForModulbank.API.Requests;
+﻿using Microsoft.AspNetCore.Mvc;
+using PaymentsServiceForModulbank.API.Requests;
 using PaymentsServiceForModulbank.API.Responses;
 using PaymentsServiceForModulebank.Core.Models;
 using PaymentsServiceForModulebank.Sqlite;
@@ -17,10 +18,10 @@ namespace PaymentsServiceForModulbank.API.Endpoints
             });
 
             app.MapPost("/operations", async (HttpContext context, 
-                OperationCreateRequest request,
-                PaymengsServiceDbContext db,
-                IOperationsRepository operationsRepository,
-                IEventsRepository eventsRepository,
+                [FromBody] OperationCreateRequest request,
+                [FromServices] PaymengsServiceDbContext db,
+                [FromServices] IOperationsRepository operationsRepository,
+                [FromServices] IEventsRepository eventsRepository,
                 CancellationToken token) =>
             {
                 await using var transaction = await db.Database.BeginTransactionAsync(token);
@@ -82,10 +83,10 @@ namespace PaymentsServiceForModulbank.API.Endpoints
             });
 
             app.MapPost("/operations/{id}/submit", async (string id,
-                PaymengsServiceDbContext db,
-                IOperationsRepository operationsRepository,
-                IOutboxRepository outboxRepository,
-                IEventsRepository eventsRepository,
+                [FromServices] PaymengsServiceDbContext db,
+                [FromServices] IOperationsRepository operationsRepository,
+                [FromServices] IOutboxRepository outboxRepository,
+                [FromServices] IEventsRepository eventsRepository,
                 CancellationToken token) =>
             {
                 await using var transaction = await db.Database.BeginTransactionAsync(token);
@@ -115,12 +116,11 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                             throw new Exception();
                         ev.Update("SUBMIT", "SUBMIT", "Operation submitted for processing");
                         await eventsRepository.CreateAsync(ev, token);
-                    }
-
-                    int resultUpdate = await operationsRepository.UpdateStatusAsync(op.OperationId, 
+                        int resultUpdate = await operationsRepository.UpdateStatusAsync(op.OperationId,
                         OperationStatus.PROCESSING, token);
-                    if(resultUpdate == 0)
-                        throw new Exception();
+                        if (resultUpdate == 0)
+                            throw new Exception();
+                    }
 
                     await db.SaveChangesAsync(token);
                     await transaction.CommitAsync(token);
@@ -134,9 +134,9 @@ namespace PaymentsServiceForModulbank.API.Endpoints
             });
 
             app.MapPost("/receipts", async (CallBackRequest request,
-                PaymengsServiceDbContext db,
-                IOperationsRepository operationsRepository,
-                IEventsRepository eventsRepository,
+                [FromServices] PaymengsServiceDbContext db,
+                [FromServices] IOperationsRepository operationsRepository,
+                [FromServices] IEventsRepository eventsRepository,
                 CancellationToken token) =>
             {
                 await using var transaction = await db.Database.BeginTransactionAsync(token);
@@ -199,7 +199,7 @@ namespace PaymentsServiceForModulbank.API.Endpoints
             });
 
             app.MapGet("/operations/{id}", async (string id,
-                IOperationsRepository operationsRepository,
+                [FromServices] IOperationsRepository operationsRepository,
                 CancellationToken token) =>
             {
                 try
@@ -216,7 +216,7 @@ namespace PaymentsServiceForModulbank.API.Endpoints
             });
 
             app.MapGet("/operations/{id}/events", async (string id,
-                IEventsRepository eventsRepository,
+                [FromServices] IEventsRepository eventsRepository,
                 CancellationToken token) =>
             {
                 try
