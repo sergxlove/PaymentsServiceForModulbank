@@ -26,5 +26,21 @@
         public DateTime UpdatedAt { get; set; }
 
         public int RetryCount { get; set; }
+        public static string StatusToString(OperationStatus status)
+        {
+            switch (status)
+            {
+                case OperationStatus.CREATED:
+                    return "CREATED";
+                case OperationStatus.PROCESSING:
+                    return "PROCESSING";
+                case OperationStatus.COMPLETED:
+                    return "COMPLETED";
+                case OperationStatus.REJECTED:
+                    return "REJECTED";
+                default:
+                    return "ERROR";
+            }
+        }
     }
 }

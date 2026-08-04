@@ -28,6 +28,7 @@
 
         public void Update(string newType, string newStatus, string newMessage)
         {
+            Id = Guid.NewGuid();
             EventId = EventId + 1;
             Type = newType;
             FromStatus = ToStatus;

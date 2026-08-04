@@ -114,7 +114,7 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                         if(ev is null)
                             throw new Exception();
                         ev.Update("SUBMIT", "SUBMIT", "Operation submitted for processing");
-                        await eventsRepository.UpdateAsync(ev, token);
+                        await eventsRepository.CreateAsync(ev, token);
                     }
 
                     int resultUpdate = await operationsRepository.UpdateStatusAsync(op.OperationId, 
@@ -186,7 +186,7 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                     if (ev is null)
                         throw new Exception();
                     ev.Update($"{request.Result}", $"{request.Result}", $"Operation {request.Result}");
-                    await eventsRepository.UpdateAsync(ev, token);
+                    await eventsRepository.CreateAsync(ev, token);
                     await db.SaveChangesAsync(token);
                     await transaction.CommitAsync(token);
                     return Results.NoContent();
@@ -207,7 +207,7 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                     OperationStatus? status = await operationsRepository.GetStatusAsync(id, token);
                     if (status is null)
                         return Results.NotFound();
-                    return Results.Ok(status);
+                    return Results.Ok(Operations.StatusToString(status.Value));
                 }
                 catch
                 {
