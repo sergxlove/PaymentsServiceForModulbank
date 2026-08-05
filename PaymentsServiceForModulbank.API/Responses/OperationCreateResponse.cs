@@ -12,7 +12,7 @@ namespace PaymentsServiceForModulbank.API.Responses
 
         public string Description { get; set; } = string.Empty;
 
-        public OperationStatus Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         public string? ProviderPaymentId { get; set; }
     }

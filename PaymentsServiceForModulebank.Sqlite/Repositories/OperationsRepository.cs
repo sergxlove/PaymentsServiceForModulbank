@@ -36,7 +36,7 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
                 .FirstOrDefaultAsync(a => a.OperationId == operationId, token);
         }
 
-        public async Task<OperationStatus?> GetStatusAsync(string operationId, CancellationToken token)
+        public async Task<string?> GetStatusAsync(string operationId, CancellationToken token)
         {
             Operations? op = await _context.OperationsTable
                 .AsNoTracking()
@@ -47,7 +47,7 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
         }
 
 
-        public async Task<int> UpdateStatusAsync(string operationId, OperationStatus status,
+        public async Task<int> UpdateStatusAsync(string operationId, string status,
             CancellationToken token)
         {
             return await _context.OperationsTable

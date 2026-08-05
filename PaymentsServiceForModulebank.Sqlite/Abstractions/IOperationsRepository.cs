@@ -7,8 +7,8 @@ namespace PaymentsServiceForModulebank.Sqlite.Abstractions
         Task<bool> CheckAsync(string operationId, CancellationToken token);
         Task<string> CreateAsync(Operations op, CancellationToken token);
         Task<Operations?> GetAsync(string operationId, CancellationToken token);
-        Task<int> UpdateStatusAsync(string operationId, OperationStatus status, CancellationToken token);
-        Task<OperationStatus?> GetStatusAsync(string operationId, CancellationToken token);
+        Task<int> UpdateStatusAsync(string operationId, string status, CancellationToken token);
+        Task<string?> GetStatusAsync(string operationId, CancellationToken token);
         Task<int> UpdateProviderAsync(string operationId, string providerid, CancellationToken token);
     }
 }

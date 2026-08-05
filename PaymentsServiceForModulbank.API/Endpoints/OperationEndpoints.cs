@@ -48,11 +48,9 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                         Amount = request.Amount,
                         Currency = request.Currency,
                         Description = request.Description,
-                        Status = OperationStatus.CREATED,
+                        Status = "CREATED",
                         ProviderPaymentId = null,
                         CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        RetryCount = 0
                     };
                     bool resultCheck = await operationsRepository.CheckAsync(newOp.OperationId, token);
                     if (resultCheck)
@@ -95,7 +93,7 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                     Operations? op = await operationsRepository.GetAsync(id, token);
                     if (op is null)
                         return Results.NotFound();
-                    if (op.Status != OperationStatus.CREATED)
+                    if (op.Status != "CREATED")
                         return Results.Ok();
                     if(!await outboxRepository.CheckAsync(op.OperationId, token))
                     {
@@ -117,7 +115,7 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                         ev.Update("SUBMIT", "SUBMIT", "Operation submitted for processing");
                         await eventsRepository.CreateAsync(ev, token);
                         int resultUpdate = await operationsRepository.UpdateStatusAsync(op.OperationId,
-                        OperationStatus.PROCESSING, token);
+                            "PROCESSING", token);
                         if (resultUpdate == 0)
                             throw new Exception();
                     }
@@ -160,26 +158,14 @@ namespace PaymentsServiceForModulbank.API.Endpoints
                         if (oper.ProviderPaymentId != request.ProviderPaymentId)
                             return Results.Conflict();
                     }
-                    if(oper.Status == OperationStatus.COMPLETED 
-                        || oper.Status == OperationStatus.REJECTED)
+                    if(oper.Status == "COMPLETED" 
+                        || oper.Status == "REJECTED")
                         return Results.NoContent();
-                    if (oper.Status == OperationStatus.COMPLETED && request.Result == "REJECTED"
-                        || oper.Status == OperationStatus.REJECTED && request.Result == "COMPLETED")
+                    if (oper.Status == "COMPLETED" && request.Result == "REJECTED"
+                        || oper.Status == "REJECTED" && request.Result == "COMPLETED")
                         return Results.NoContent();
-                    OperationStatus finalStatus;
-                    switch(request.Result)
-                    {
-                        case "REJECTED":
-                            finalStatus = OperationStatus.REJECTED;
-                            break;
-                        case "COMPLETED":
-                            finalStatus = OperationStatus.COMPLETED;
-                            break;
-                        default:
-                            return Results.BadRequest();
-                    }
                     int resultUpdateStatus = await operationsRepository.UpdateStatusAsync(oper.OperationId,
-                        finalStatus, token);
+                        request.Result, token);
                     if (resultUpdateStatus == 0)
                         throw new Exception();
                     Events? ev = await eventsRepository.GetLastOperAsync(oper.OperationId, token);
@@ -204,10 +190,10 @@ namespace PaymentsServiceForModulbank.API.Endpoints
             {
                 try
                 {
-                    OperationStatus? status = await operationsRepository.GetStatusAsync(id, token);
+                    string? status = await operationsRepository.GetStatusAsync(id, token);
                     if (status is null)
                         return Results.NotFound();
-                    return Results.Ok(Operations.StatusToString(status.Value));
+                    return Results.Ok(status);
                 }
                 catch
                 {
