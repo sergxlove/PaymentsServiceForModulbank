@@ -81,7 +81,13 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
                 {
                     var responseContent = await response.Content.ReadAsStringAsync(token);
                     var providerResponse = JsonSerializer.Deserialize<ProviderPaymentResponse>(responseContent);
-                    if(providerResponse is null)
+                    Events? lastEv = await eventsRepository.GetLastOperAsync(payload.OperationId, token);
+                    if (lastEv is null)
+                        return;
+                    lastEv.Update("PROVIDER_RESPONSE", "PROCESSING", $"Payment accepted by provider." +
+                        $" Count retry: {await outboxRepository.GetCountAsync(payload.OperationId, token)}");
+                    await eventsRepository.CreateAsync(lastEv, token);
+                    if (providerResponse is null)
                     {
                         await outboxRepository.IncrementRetryAsync(payload.OperationId, token);
                         return;
@@ -90,11 +96,6 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
                     {
                         await operationsRepository.UpdateProviderAsync(payload.OperationId, 
                             providerResponse.ProviderPaymentId, token);
-                        Events? lastEv = await eventsRepository.GetLastOperAsync(payload.OperationId, token);
-                        if (lastEv is null)
-                            return;
-                        lastEv.Update("PROVIDER_RESPONSE", "PROCESSING", "Payment accepted by provider");
-                        await eventsRepository.CreateAsync(lastEv, token);
                         await outboxRepository.UpdateStatusAsync(message.Id, "COMPLETED", token);
                     }
                     else

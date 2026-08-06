@@ -17,7 +17,7 @@ namespace PaymentsServiceForModulbank.API
             builder.Services.AddScoped<IEventsRepository, EventsRepository>();
             builder.Services.AddScoped<IOperationsRepository, OperationsRepository>();
             builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
-            //builder.Services.AddHostedService<OutboxProcessorService>();
+            builder.Services.AddHostedService<OutboxProcessorService>();
             builder.Services.AddHttpClient();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
