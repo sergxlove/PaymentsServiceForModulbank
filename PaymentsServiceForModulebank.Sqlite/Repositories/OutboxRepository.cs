@@ -36,6 +36,16 @@ namespace PaymentsServiceForModulebank.Sqlite.Repositories
                 .ToListAsync(token);
         }
 
+        public async Task<int?> GetCountAsync(string operationId, CancellationToken token)
+        {
+            OutboxMessages? result = await _context.OutboxTable
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.OperationId == operationId, token);
+            if (result is null)
+                return null;
+            return result.RetryCount;
+        }
+
         public async Task<List<OutboxMessages>> GetByStatusAsync(List<string> status, int take,
             CancellationToken token)
         {

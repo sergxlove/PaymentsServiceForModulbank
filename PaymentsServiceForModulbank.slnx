@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/SolutionFolder/">
+    <File Path=".dockerignore" />
     <File Path="docker-compose.yml" />
   </Folder>
   <Project Path="PaymentsServiceForModulbank.API/PaymentsServiceForModulbank.API.csproj" />
