@@ -5,21 +5,27 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY PaymentsServiceForModulbankAPI/*.csproj ./PaymentsServiceForModulbankAPI/
+# Копируем файлы проектов
+COPY PaymentsServiceForModulbank.API/*.csproj ./PaymentsServiceForModulbank.API/
 COPY PaymentsServiceForModulebank.Core/*.csproj ./PaymentsServiceForModulebank.Core/
 COPY PaymentsServiceForModulebank.Sqlite/*.csproj ./PaymentsServiceForModulebank.Sqlite/
 
-RUN dotnet restore ./PaymentsServiceForModulbankAPI/PaymentsServiceForModulbankAPI.csproj
+# Восстанавливаем зависимости
+RUN dotnet restore ./PaymentsServiceForModulbank.API/PaymentsServiceForModulbank.API.csproj
 
+# Копируем весь исходный код
 COPY . .
 
-WORKDIR /src/PaymentsServiceForModulbankAPI
-RUN dotnet build -c Release -o /app/build
+# Сборка
+WORKDIR /src/PaymentsServiceForModulbank.API
+RUN dotnet build PaymentsServiceForModulbank.API.csproj -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet publish PaymentsServiceForModulbank.API.csproj -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
+
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "PaymentsServiceForModulbankAPI.dll"]
+
+ENTRYPOINT ["dotnet", "PaymentsServiceForModulbank.API.dll"]

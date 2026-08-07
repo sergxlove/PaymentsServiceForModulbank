@@ -13,7 +13,7 @@ namespace PaymentsServiceForModulbank.API
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddDbContext<PaymengsServiceDbContext>(options =>
-                options.UseSqlite("Data Source=payments.db"));
+                options.UseSqlite("Data Source=/data/payments.db"));
             builder.Services.AddScoped<IEventsRepository, EventsRepository>();
             builder.Services.AddScoped<IOperationsRepository, OperationsRepository>();
             builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
@@ -21,7 +21,7 @@ namespace PaymentsServiceForModulbank.API
             builder.Services.AddHttpClient();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-            //builder.WebHost.UseUrls("http://*:8080");
+            builder.WebHost.UseUrls("http://*:8080");
             var app = builder.Build();
             app.UseSwagger();
             app.UseSwaggerUI();

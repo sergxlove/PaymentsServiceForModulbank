@@ -2,7 +2,7 @@ services:
   candidate-service:
     build: 
       context: .                                    
-      dockerfile: ./PaymentsServiceForModulbankAPI/Dockerfile
+      dockerfile: PaymentsServiceForModulbank.API/Dockerfile
     environment:
       PROVIDER_URL: http://provider-simulator:8081
     ports:
