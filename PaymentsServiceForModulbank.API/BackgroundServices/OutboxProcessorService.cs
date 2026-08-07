@@ -70,7 +70,7 @@ namespace PaymentsServiceForModulbank.API.BackgroundServices
                 };
                 var requestContent = new StringContent(JsonSerializer.Serialize(payloadProvider), Encoding.UTF8,
                     "application/json");
-                var requestMessage = new HttpRequestMessage(HttpMethod.Post, "http://localhost:8081/payments")
+                var requestMessage = new HttpRequestMessage(HttpMethod.Post, "http://provider-simulator:8081/payments")
                 { 
                     Content = requestContent 
                 };

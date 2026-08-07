@@ -2,6 +2,7 @@
   <Folder Name="/SolutionFolder/">
     <File Path=".dockerignore" />
     <File Path="docker-compose.yml" />
+    <File Path="task.md" />
   </Folder>
   <Project Path="PaymentsServiceForModulbank.API/PaymentsServiceForModulbank.API.csproj" />
   <Project Path="PaymentsServiceForModulebank.Core/PaymentsServiceForModulebank.Core.csproj" Id="9a542d77-674a-4cd2-bc8f-24ed29e79112" />
